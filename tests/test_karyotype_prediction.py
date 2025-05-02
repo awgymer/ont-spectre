@@ -29,40 +29,38 @@ def decompress_gzip_file(gz_path, out_path):
 
 @pytest.fixture(scope="session")
 def setup_test_environment(tmp_path_factory):
-    # Create a temporary directory for the test data
     test_dir = tmp_path_factory.mktemp("karyotype_test_data")
-    os.chdir(test_dir)
 
-    # Download and extract test data
-    test_data_tar = "karyotype_prediction_test_data_v1.tar.gz"
+    # Download and extract test data into test_dir
+    test_data_tar = test_dir / "karyotype_prediction_test_data_v1.tar.gz"
     download_file(TEST_DATA_URL, test_data_tar)
-    extract_tar_file(test_data_tar, test_dir)
+    extract_tar_file(str(test_data_tar), str(test_dir))
 
-    # Download and extract the human hg38 reference genome
-    reference_genome_gz = "GCA_000001405.15_GRCh38_no_alt_analysis_set.fna.bgzf.gz"
+    # Download the human hg38 reference genome into test_dir
+    reference_genome_gz = test_dir / "GCA_000001405.15_GRCh38_no_alt_analysis_set.fna.bgzf.gz"
     download_file(REFERENCE_GENOME_URL, reference_genome_gz)
-    
-    yield test_dir  # Provide the directory path to the test
 
-    # Cleanup after tests are done
-    os.chdir(tmp_path_factory.getbasetemp())  # Change to a safe directory before cleanup
+    yield test_dir
+
     shutil.rmtree(test_dir)
 
 @pytest.mark.parametrize("sample_dir", ['GM18501', 'GM18861', 'GM18864', 'NA18310'])
 def test_karyotype_prediction(setup_test_environment, sample_dir):
     sample_dir_path = setup_test_environment / "karyotype_prediction_test_data" / sample_dir
 
-    # Change the working directory to the sample directory
-    os.chdir(sample_dir_path)
-    
+    coverage_dir = str(sample_dir_path / "mosdepth")
+    snv_path = str(sample_dir_path / "wf_snp.vcf.gz")
+    output_dir = str(sample_dir_path / "output_spectre")
+    reference_path = str(setup_test_environment / "GCA_000001405.15_GRCh38_no_alt_analysis_set.fna.bgzf.gz")
+
     args = [
         "CNVCaller",
         "--bin-size", "1000",
-        "--coverage", "mosdepth/",
-        "--snv", "wf_snp.vcf.gz",
+        "--coverage", coverage_dir,
+        "--snv", snv_path,
         "--sample-id", "sample",
-        "--output-dir", "output_spectre",
-        "--reference", "../../GCA_000001405.15_GRCh38_no_alt_analysis_set.fna.bgzf.gz",
+        "--output-dir", output_dir,
+        "--reference", reference_path,
         "--metadata", "hg38_metadata",
         "--blacklist", "hg38_blacklist_v1.0"
     ]
@@ -73,12 +71,12 @@ def test_karyotype_prediction(setup_test_environment, sample_dir):
     assert exc_info.type == SystemExit
     assert exc_info.value.code == 0
 
-    # Read the predicted and expected karyotypes
-    with open("output_spectre/predicted_karyotype.txt") as f:
+    predicted_file = sample_dir_path / "output_spectre" / "predicted_karyotype.txt"
+    with open(predicted_file) as f:
         predicted_karyotype = f.read().strip()
 
-    with open("expected_karyotype.txt") as f:
+    expected_file = sample_dir_path / "expected_karyotype.txt"
+    with open(expected_file) as f:
         expected_karyotype = f.read().strip()
 
-    # Assert that the predicted karyotype matches the expected karyotype
     assert predicted_karyotype == expected_karyotype, f"Karyotype mismatch: {predicted_karyotype} != {expected_karyotype}"
