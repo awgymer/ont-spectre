@@ -223,11 +223,7 @@ class CNVMetrics(object):
                                                                                         self.blacklist_exclusions)
 
         # Add exclusion indices
-        # if len(excl_zone_blacklist_indices) > 0:
-        # df_coverage_candidate_no_Nans.loc[excl_zone_blacklist_indices, "blacklist"] = True
-        # df_coverage_candidate_no_Nans.loc[df_coverage_candidate_no_Nans.index.isin(excl_zone_blacklist_indices), "blacklist"] = True
-        df_coverage_candidate_no_Nans.iloc[
-            excl_zone_blacklist_indices, df_coverage_candidate_no_Nans.columns.get_loc("blacklist")] = True
+        df_coverage_candidate_no_Nans.loc[excl_zone_blacklist_indices, "blacklist"] = True
 
         # load curated data
         df_coverage_candidate_no_blacklist = df_coverage_candidate_no_Nans.loc[df_coverage_candidate.blacklist == False]
