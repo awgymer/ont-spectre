@@ -102,7 +102,12 @@ class VCFSNVParser(object):
                         af = "NA"
                     vcf_entries.append([chrom_, int(start_), None, af])
         vcf_file.close()
-        return pd.DataFrame(data=vcf_entries, columns=["chrom_", "start_", "end_", "af_"])
+        vcf_df = pd.DataFrame(data=vcf_entries, columns=["chrom_", "start_", "end_", "af_"])
+        # fixed column types, so that a VCF with no records still gives the correct schema
+        vcf_df["chrom_"] = vcf_df["chrom_"].astype("string")
+        vcf_df["start_"] = vcf_df["start_"].astype("int64")
+        vcf_df["af_"] = pd.to_numeric(vcf_df["af_"], errors="coerce").astype("float64")
+        return vcf_df
 
     def get_mosdepth_chromosome_borders(self, mosdepth_file: str = ""):
         in_path = self.__get_absolute_path(mosdepth_file)
