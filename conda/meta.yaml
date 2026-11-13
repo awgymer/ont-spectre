@@ -25,7 +25,7 @@ requirements:
     - pandas>=2.0.1
     - matplotlib>=3.7.1
     - scipy>=1.10.1
-    - polars>=0.19.15
+    - polars>=0.20.31
     - pyarrow>=14.0.0
 
 test:
