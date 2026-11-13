@@ -126,7 +126,7 @@ class CNVAnalysis(object):
             has_header=False,
             separator='\t',
             new_columns=MOSDEPTH_HEADER,
-            dtypes=MOSDEPTH_DTYPES
+            schema_overrides=MOSDEPTH_DTYPES
         )
         coverages_df = coverages_df.join(af_good_bins_df, on=['chrom_', 'start_'], how='left')
         self.coverages_df = coverages_df.with_columns(pl.col("af_good").fill_null(False))
