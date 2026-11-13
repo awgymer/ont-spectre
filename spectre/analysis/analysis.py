@@ -132,6 +132,11 @@ class CNVAnalysis(object):
         self.coverages_df = coverages_df.with_columns(pl.col("af_good").fill_null(False))
 
         self.coverages_df_diploid = self.coverages_df.filter(af_good=True)
+        if self.coverages_df_diploid.is_empty():
+            # no bin has heterozygous SNVs (for example an SNV VCF with no records), so use all covered bins
+            self.logger.warning("No bins with heterozygous SNVs. Using all bins with coverage above 0 to "
+                                "calculate the diploid coverage")
+            self.coverages_df_diploid = self.coverages_df.filter(pl.col('coverage_') > 0)
 
     # Can detect poidy for any chromosome, used for X/Y
     def detect_chromosome_ploidy(self, chr_median_cov_normalized):
