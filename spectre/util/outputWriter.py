@@ -182,7 +182,8 @@ class VCFOutput(object):
         vcf_lines = self.vcf_result(chromosome_list, cnv_candidate_list)
         file_handler.write(f'{vcf_header}\n')
         file_handler.write(f'{vcf_sample_header}\n')
-        file_handler.write(f'{vcf_lines}\n')
+        if len(vcf_lines) > 0:
+            file_handler.write(f'{vcf_lines}\n')
         file_handler.close()
 
 
