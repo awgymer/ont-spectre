@@ -1,8 +1,10 @@
 import pytest
 import numpy as np
+import pandas as pd
 from unittest.mock import MagicMock, mock_open
 
 from spectre.analysis.analysis import CNVAnalysis
+from spectre.util.vcf_parser import VCFSNVParser
 
 @pytest.fixture
 def cnv_analysis():
@@ -66,3 +68,35 @@ def test_chromosome_ploidy_detection_combinations(monkeypatch, cnv_analysis, chr
 
     assert cnv_analysis.sex_choromosome_ploidies['chrX'] == chrX_copies
     assert cnv_analysis.sex_choromosome_ploidies['chrY'] == chrY_copies
+
+
+@pytest.mark.parametrize("snvs, expected_median", [
+    # no SNVs: all usable bins with coverage give the diploid coverage
+    ([], 31),
+    # a heterozygous SNV in a usable bin
+    ([("chr1", 500, 0.5)], 30),
+    # a heterozygous SNV in a blacklisted bin and one on a chromosome that is not selected
+    ([("chr1", 2500, 0.5), ("chr2", 500, 0.5)], 31),
+])
+def test_diploid_coverage_uses_only_usable_bins(tmp_path, monkeypatch, cnv_analysis, snvs, expected_median):
+    coverage_file = tmp_path / "sample.regions.bed"
+    coverage_file.write_text(
+        "chr1\t0\t1000\t30\n"
+        "chr1\t1000\t2000\t32\n"
+        "chr1\t2000\t3000\t0.5\n"
+        "chr1\t3000\t4000\t0.4\n"
+        "chr2\t0\t1000\t0.3\n"
+        "chr2\t1000\t2000\t0.2\n"
+    )
+    cnv_analysis.coverage_full_path = str(coverage_file)
+    cnv_analysis.only_chr_list = ["chr1"]
+    cnv_analysis.metadata = {"chr1": [("2000", "4000")]}
+
+    vcf_df = pd.DataFrame(snvs, columns=["chrom_", "start_", "af_"]).astype(
+        {"chrom_": "string", "start_": "int64", "af_": "float64"})
+    monkeypatch.setattr(VCFSNVParser, "vcf_to_dataframe", lambda self, path: vcf_df)
+
+    cnv_analysis.vcf_based_af_bins_annotation()
+
+    assert cnv_analysis.coverages_df["start_"].to_list() == [0, 1000]
+    assert cnv_analysis.genome_median() == expected_median
