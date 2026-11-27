@@ -87,4 +87,11 @@ class CNVCall(object):
                     current_cnv_type = ""
                 run_current_pos = pos
 
+        # the last run has no following bin that breaks it
+        if len(cnv_pos_cand_list) >= min_run:
+            cnv_candidates = CNVCandidate(sample_origin, self.as_dev)
+            cnv_candidates.push_candidates(chromosome_name, cnv_pos_cand_list, cnv_cov_cand_list,
+                                           current_cnv_type)
+            candidate_list.append(cnv_candidates)
+
         return candidate_list
