@@ -46,9 +46,11 @@ class CNVCall(object):
                 if cov > upper_bound or cov < lower_bound:
                     cnv_type = "DUP" if cov > upper_bound else "DEL"
                     # start run
-                    if run_start == 0:
+                    if run_start == 0 and not cnv_pos_cand_list:
                         current_cnv_type = cnv_type
                         run_start = pos
+                        cnv_pos_cand_list = [pos]
+                        cnv_cov_cand_list = [cov]
                     else:
                         # continue run if not in the chromosome end
                         if pos - run_current_pos < bin_size + 1 and current_cnv_type == cnv_type:
