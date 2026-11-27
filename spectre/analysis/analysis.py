@@ -112,6 +112,26 @@ class CNVAnalysis(object):
 
         return af_good_bins_df
 
+    def usable_bins_df(self, coverages_df):
+        """
+        Keep only the bins that the CNV calling uses: the bins on the selected chromosomes that are not in an
+        "N" or blacklisted region. The other bins must not change the diploid coverage.
+        :param coverages_df: coverage of all bins
+        :return: coverage of the usable bins
+        """
+        coverages_df = coverages_df.filter(pl.col('chrom_').is_in(self.only_chr_list))
+        positions = coverages_df['start_'].to_numpy()
+        excluded = np.zeros(coverages_df.height, dtype=bool)
+        for chrom, regions in self.metadata.items():
+            in_chrom = (coverages_df['chrom_'] == chrom).to_numpy()
+            chrom_positions = positions[in_chrom]
+            chrom_excluded = np.zeros(chrom_positions.size, dtype=bool)
+            # same rule as __remove_n_region_by_chromosome
+            for meta_start, meta_end in regions:
+                chrom_excluded |= np.logical_and(chrom_positions >= int(meta_start), chrom_positions <= int(meta_end))
+            excluded[in_chrom] = chrom_excluded
+        return coverages_df.filter(pl.Series(~excluded))
+
     def vcf_based_af_bins_annotation(self):
         self.logger.info("Parsing VCF to AF freqs file")
         vcf = vcf_parser.VCFSNVParser(self.min_chr_length, self.as_dev)
@@ -128,6 +148,7 @@ class CNVAnalysis(object):
             new_columns=MOSDEPTH_HEADER,
             schema_overrides=MOSDEPTH_DTYPES
         )
+        coverages_df = self.usable_bins_df(coverages_df)
         coverages_df = coverages_df.join(af_good_bins_df, on=['chrom_', 'start_'], how='left')
         self.coverages_df = coverages_df.with_columns(pl.col("af_good").fill_null(False))
 
